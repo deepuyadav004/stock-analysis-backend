@@ -4,6 +4,7 @@ from starlette.routing import Route
 from sqlalchemy import text
 
 from app.core.database import engine
+from app.routers.test import test_endpoint
 
 
 async def health(_: object) -> JSONResponse:
@@ -25,6 +26,7 @@ async def health_db(_: object) -> JSONResponse:
 app = Starlette(
     debug=True,
     routes=[
+        Route("/test", test_endpoint),
         Route("/health", health),
         Route("/health/db", health_db),
     ],
