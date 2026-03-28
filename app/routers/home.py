@@ -126,9 +126,9 @@ async def home_summary(request: Request) -> JSONResponse:
             text(
                 """
                 SELECT
-                    COUNT(*) FILTER (WHERE sp.signal = 'UP') AS up_count,
-                    COUNT(*) FILTER (WHERE sp.signal = 'DOWN') AS down_count,
-                    COUNT(*) FILTER (WHERE sp.signal = 'NEUTRAL') AS neutral_count,
+                    COUNT(*) FILTER (WHERE sp.signal = ''UP'') AS up_count,
+                    COUNT(*) FILTER (WHERE sp.signal = ''DOWN'') AS down_count,
+                    COUNT(*) FILTER (WHERE sp.signal = ''NEUTRAL'') AS neutral_count,
                     COUNT(*) AS total_sectors,
                     AVG(sp.confidence) AS avg_confidence,
                     AVG(ssd.avg_score) AS avg_sentiment_score
@@ -203,6 +203,35 @@ async def sector_signals(request: Request) -> JSONResponse:
             status_code=400,
         )
 
+    # Build WHERE clause with filters
+    where_conditions = ["sp.date = :snapshot_date"]
+    params: dict[str, Any] = {"snapshot_date": snapshot_date, "limit": limit, "offset": offset}
+
+    # Apply signal filter (UP, DOWN, NEUTRAL)
+    signals = query.get("signal", "").upper().split(",")
+    signals = [s.strip() for s in signals if s.strip() and s.strip() in ("UP", "DOWN", "NEUTRAL")]
+    if signals:
+        placeholders = ", ".join([f":signal_{i}" for i in range(len(signals))])
+        where_conditions.append(f"sp.signal IN ({placeholders})")
+        for i, sig in enumerate(signals):
+            params[f"signal_{i}"] = sig
+
+    # Apply confidence range filter
+    try:
+        confidence_min = float(query.get("confidence_min", 0))
+        confidence_max = float(query.get("confidence_max", 1))
+        confidence_min = max(0, min(confidence_min, 1))
+        confidence_max = max(0, min(confidence_max, 1))
+        if confidence_min > confidence_max:
+            confidence_min, confidence_max = confidence_max, confidence_min
+        where_conditions.append("sp.confidence >= :confidence_min AND sp.confidence <= :confidence_max")
+        params["confidence_min"] = confidence_min
+        params["confidence_max"] = confidence_max
+    except (ValueError, TypeError):
+        return JSONResponse({"error": "confidence_min and confidence_max must be floats [0, 1]."}, status_code=400)
+
+    where_clause = " AND ".join(where_conditions)
+
     sql = f"""
         SELECT
             s.id AS sector_id,
@@ -217,25 +246,19 @@ async def sector_signals(request: Request) -> JSONResponse:
         LEFT JOIN sector_sentiment_daily ssd
             ON ssd.sector_id = sp.sector_id
             AND ssd.date = sp.date
-        WHERE sp.date = :snapshot_date
+        WHERE {where_clause}
         ORDER BY {order_clause}
         LIMIT :limit OFFSET :offset
     """
 
-    with engine.connect() as conn:
-        total_row = conn.execute(
-            text("SELECT COUNT(*) AS total FROM sector_predictions WHERE date = :snapshot_date"),
-            {"snapshot_date": snapshot_date},
-        ).mappings().first()
+    count_sql = f"""
+        SELECT COUNT(*) AS total FROM sector_predictions sp
+        WHERE {where_clause}
+    """
 
-        rows = conn.execute(
-            text(sql),
-            {
-                "snapshot_date": snapshot_date,
-                "limit": limit,
-                "offset": offset,
-            },
-        ).mappings().all()
+    with engine.connect() as conn:
+        total_row = conn.execute(text(count_sql), params).mappings().first()
+        rows = conn.execute(text(sql), params).mappings().all()
 
     age_days = _age_days(snapshot_date)
     items: list[dict[str, Any]] = []
