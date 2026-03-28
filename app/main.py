@@ -4,6 +4,7 @@ from starlette.routing import Route
 from sqlalchemy import text
 
 from app.core.database import engine
+from app.routers.home import home_summary, sector_signals, snapshot_latest
 from app.routers.test import test_endpoint
 
 
@@ -29,5 +30,8 @@ app = Starlette(
         Route("/test", test_endpoint),
         Route("/health", health),
         Route("/health/db", health_db),
+        Route("/v1/snapshot/latest", snapshot_latest),
+        Route("/v1/home/summary", home_summary),
+        Route("/v1/sectors/signals", sector_signals),
     ],
 )
