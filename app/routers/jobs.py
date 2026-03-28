@@ -14,12 +14,16 @@ def _is_authorized_cron(request: Request) -> bool:
     If CRON_SECRET is not configured, allow unauthenticated access.
     """
     secret = os.getenv("CRON_SECRET", "").strip()
+    print(f"[CronAuth] CRON_SECRET configured: {bool(secret)}", flush=True)
     if not secret:
+        print(f"[CronAuth] No CRON_SECRET set, allowing unauthenticated request", flush=True)
         return True
 
     auth_header = request.headers.get("authorization", "")
     expected = f"Bearer {secret}"
-    return auth_header == expected
+    is_valid = auth_header == expected
+    print(f"[CronAuth] Auth header present: {bool(auth_header)}, Valid: {is_valid}", flush=True)
+    return is_valid
 
 
 async def run_daily_pipeline_job(request: Request) -> JSONResponse:

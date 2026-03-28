@@ -20,7 +20,6 @@ jobs:
       - name: Call backend daily pipeline endpoint
         env:
           PIPELINE_TRIGGER_URL: ${{ secrets.PIPELINE_TRIGGER_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           if [ -z "$PIPELINE_TRIGGER_URL" ]; then
             echo "PIPELINE_TRIGGER_URL secret is missing"
@@ -35,12 +34,13 @@ jobs:
           echo "Using trigger URL: $trigger_url"
 
           echo "Triggering pipeline endpoint..."
-          if [ -n "$CRON_SECRET" ]; then
+          if [ -n "${{ secrets.CRON_SECRET }}" ]; then
             response=$(curl -sS -w "\n%{http_code}" \
-              -H "Authorization: Bearer ${CRON_SECRET}" \
+              -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
               -L \
               "$trigger_url")
           else
+            echo "No CRON_SECRET configured, calling without auth header"
             response=$(curl -sS -w "\n%{http_code}" -L "$trigger_url")
           fi
 
