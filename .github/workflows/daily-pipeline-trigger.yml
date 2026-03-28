@@ -27,13 +27,21 @@ jobs:
             exit 1
           fi
 
+          trigger_url="$PIPELINE_TRIGGER_URL"
+          if [[ "$trigger_url" != *"/v1/jobs/daily-pipeline" ]]; then
+            trigger_url="${trigger_url%/}/v1/jobs/daily-pipeline"
+          fi
+
+          echo "Using trigger URL: $trigger_url"
+
           echo "Triggering pipeline endpoint..."
           if [ -n "$CRON_SECRET" ]; then
             response=$(curl -sS -w "\n%{http_code}" \
               -H "Authorization: Bearer ${CRON_SECRET}" \
-              "$PIPELINE_TRIGGER_URL")
+              -L \
+              "$trigger_url")
           else
-            response=$(curl -sS -w "\n%{http_code}" "$PIPELINE_TRIGGER_URL")
+            response=$(curl -sS -w "\n%{http_code}" -L "$trigger_url")
           fi
 
           body=$(echo "$response" | sed '$d')
