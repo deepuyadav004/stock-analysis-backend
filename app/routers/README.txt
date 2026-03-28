@@ -9,6 +9,7 @@ Provides stable entry points for mobile app data retrieval with support for sect
 3. File Responsibilities
 - home.py: Chunk 1-3 endpoints with filtering (signals, trends, detail, etc).
 - insights.py: Chunk 4 endpoints for compare and stability insights.
+- jobs.py: Protected endpoint(s) for cron-triggered backend jobs.
 - test.py: Lightweight service availability endpoint.
 - __init__.py: Package marker.
 
@@ -18,6 +19,7 @@ Provides stable entry points for mobile app data retrieval with support for sect
 3. `GET /v1/insights/signal-stability` computes per-sector signal flips and stability ratio.
 4. `GET /v1/meta/version` returns lightweight API release metadata.
 5. `GET /v1/meta/diagnostics` returns dataset health counts for app diagnostics.
+6. `GET /v1/jobs/daily-pipeline` runs the daily pipeline when called by cron with valid bearer auth.
 
 5. Interactions
 - Uses app/core/database.py for DB engine.
@@ -29,6 +31,7 @@ Provides stable entry points for mobile app data retrieval with support for sect
 - Snapshot date is daily, not real-time.
 - Signal enum: UP, DOWN, NEUTRAL
 - Confidence values are [0, 1]
+- CRON_SECRET is configured in deployment environment for job endpoint authorization.
 
 7. Future Improvements
 - Move SQL into service layer.

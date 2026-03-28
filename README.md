@@ -145,6 +145,26 @@ python app/scrapers/News_Scrappers/news_scraper.py --save
 python run_daily_pipeline.py
 ```
 
+### Automatic daily run on Render (03:00 IST)
+
+This repo now includes `render.yaml` cron config:
+
+- Service type: `cron`
+- Schedule: `30 21 * * *` (UTC), which is `03:00` IST daily
+- Command: `python run_daily_pipeline.py`
+
+How it works:
+
+1. Render Cron starts a one-off job at `21:30 UTC` daily.
+2. Job executes `python run_daily_pipeline.py`.
+3. Pipeline runs scrape, sentiment save, feature build, and prediction persistence.
+
+Optional manual trigger endpoint:
+
+- `GET /v1/jobs/daily-pipeline`
+- Requires `Authorization: Bearer <CRON_SECRET>`
+- Useful if you prefer HTTP-triggered jobs from an external scheduler.
+
 ## Can You Start This Project Now?
 
 Yes, you can start it locally after these conditions are met:
