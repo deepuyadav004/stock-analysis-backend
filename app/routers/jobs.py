@@ -9,10 +9,13 @@ from app.schedulers.daily_pipeline import run_daily_pipeline
 
 
 def _is_authorized_cron(request: Request) -> bool:
-    """Validate scheduled-job auth using CRON_SECRET bearer token."""
+    """Validate scheduled-job auth using CRON_SECRET bearer token.
+
+    If CRON_SECRET is not configured, allow unauthenticated access.
+    """
     secret = os.getenv("CRON_SECRET", "").strip()
     if not secret:
-        return False
+        return True
 
     auth_header = request.headers.get("authorization", "")
     expected = f"Bearer {secret}"

@@ -1,0 +1,48 @@
+name: Daily Pipeline Trigger
+
+on:
+  schedule:
+    - cron: "30 21 * * *" # 03:00 IST daily
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: daily-pipeline-trigger
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Call backend daily pipeline endpoint
+        env:
+          PIPELINE_TRIGGER_URL: ${{ secrets.PIPELINE_TRIGGER_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$PIPELINE_TRIGGER_URL" ]; then
+            echo "PIPELINE_TRIGGER_URL secret is missing"
+            exit 1
+          fi
+
+          echo "Triggering pipeline endpoint..."
+          if [ -n "$CRON_SECRET" ]; then
+            response=$(curl -sS -w "\n%{http_code}" \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              "$PIPELINE_TRIGGER_URL")
+          else
+            response=$(curl -sS -w "\n%{http_code}" "$PIPELINE_TRIGGER_URL")
+          fi
+
+          body=$(echo "$response" | sed '$d')
+          code=$(echo "$response" | tail -n1)
+
+          echo "HTTP status: $code"
+          echo "Response body: $body"
+
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            echo "Pipeline trigger failed"
+            exit 1
+          fi

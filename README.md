@@ -159,6 +159,29 @@ How it works:
 2. Job executes `python run_daily_pipeline.py`.
 3. Pipeline runs scrape, sentiment save, feature build, and prediction persistence.
 
+Note for Render Free plan:
+
+- Render Cron Jobs are not available on free instance types.
+- Use the GitHub Actions scheduler below if you are on the free plan.
+
+### Automatic daily run via GitHub Actions (Render Free friendly)
+
+This repo includes `.github/workflows/daily-pipeline-trigger.yml`:
+
+- Schedule: `30 21 * * *` (UTC), which is `03:00` IST daily
+- Action: calls your deployed API endpoint `/v1/jobs/daily-pipeline`
+
+Required GitHub repository secrets:
+
+- `PIPELINE_TRIGGER_URL`: full URL, for example `https://<your-render-domain>/v1/jobs/daily-pipeline`
+- `CRON_SECRET` (optional but recommended): same value configured in your backend environment
+
+Required backend environment variable:
+
+- `CRON_SECRET` (optional): used by the endpoint to authorize scheduler calls.
+   - If set: endpoint requires `Authorization: Bearer <CRON_SECRET>`.
+   - If not set: endpoint allows unauthenticated calls.
+
 Optional manual trigger endpoint:
 
 - `GET /v1/jobs/daily-pipeline`
