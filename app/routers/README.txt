@@ -20,6 +20,7 @@ Provides stable entry points for mobile app data retrieval with support for sect
 4. `GET /v1/meta/version` returns lightweight API release metadata.
 5. `GET /v1/meta/diagnostics` returns dataset health counts for app diagnostics.
 6. `GET /v1/jobs/daily-pipeline` runs the daily pipeline when called by cron with valid bearer auth.
+	In the `vercel-deployment` branch, ML pipeline lines are commented out and this endpoint returns 503.
 
 5. Interactions
 - Uses app/core/database.py for DB engine.
@@ -32,6 +33,7 @@ Provides stable entry points for mobile app data retrieval with support for sect
 - Signal enum: UP, DOWN, NEUTRAL
 - Confidence values are [0, 1]
 - CRON_SECRET is configured in deployment environment for job endpoint authorization.
+- Vercel deployment branch keeps ML code in-repo but comments out runtime execution to satisfy serverless size limits.
 
 7. Future Improvements
 - Move SQL into service layer.
@@ -39,3 +41,4 @@ Provides stable entry points for mobile app data retrieval with support for sect
 - Add caching for repeated snapshot requests with same filters.
 - Add indices on (sector_id, date) and (signal, confidence) for faster filtering.
 - Add historical rollup tables for faster multi-window insights queries.
+- Maintain separate deployment targets: lightweight API on Vercel and full ML pipeline on Fly.io/Render.
