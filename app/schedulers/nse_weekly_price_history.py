@@ -15,4 +15,4 @@ def run_nse_weekly_price_history() -> dict[str, int]:
         sleep_seconds=0.2,
     )
     print("--- Weekly NSE Price Import Complete ---", flush=True)
-    return summary
+    return summaryy

@@ -6,6 +6,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 # from app.schedulers.daily_pipeline import run_daily_pipeline
+from app.schedulers.nse_weekly_price_history import run_nse_weekly_price_history
 
 
 def _is_authorized_cron(request: Request) -> bool:

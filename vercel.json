@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/v1/jobs/weekly-nse-price-history",
+      "schedule": "30 21 * * 6"
+    }
+  ]
+}
