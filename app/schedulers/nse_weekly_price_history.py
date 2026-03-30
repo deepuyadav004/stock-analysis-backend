@@ -10,9 +10,10 @@ def run_nse_weekly_price_history() -> dict[str, int]:
         flush=True,
     )
     summary = import_nse_price_history(
+        years=1,
         lookback_days=7,
         window_days=7,
         sleep_seconds=0.2,
     )
     print("--- Weekly NSE Price Import Complete ---", flush=True)
-    return summaryy
+    return summary
