@@ -4,7 +4,7 @@ Module: GitHub Scheduled Workflow
 Provide a low-cost scheduler for private repositories where platform-native cron jobs are unavailable on the free plan.
 
 2. Problem Solved
-Triggers the backend daily pipeline without requiring paid Render Cron Jobs.
+Triggers the backend daily pipeline from GitHub Actions when platform-native scheduler options are not preferred.
 
 3. File Responsibilities
 - daily-pipeline-trigger.yml: Scheduled GitHub Actions workflow that calls the protected pipeline endpoint.

@@ -20,7 +20,7 @@ Provides stable entry points for mobile app data retrieval with support for sect
 4. `GET /v1/meta/version` returns lightweight API release metadata.
 5. `GET /v1/meta/diagnostics` returns dataset health counts for app diagnostics.
 6. `GET /v1/jobs/daily-pipeline` runs the daily pipeline when called by cron with valid bearer auth.
-	In the `vercel-deployment` branch, ML pipeline lines are commented out and this endpoint returns 503.
+7. `GET /v1/jobs/weekly-nse-price-history` runs weekly NSE stock price sync for the last 7 days when called by cron (no bearer auth for now).
 
 5. Interactions
 - Uses app/core/database.py for DB engine.
@@ -33,7 +33,7 @@ Provides stable entry points for mobile app data retrieval with support for sect
 - Signal enum: UP, DOWN, NEUTRAL
 - Confidence values are [0, 1]
 - CRON_SECRET is configured in deployment environment for job endpoint authorization.
-- Vercel deployment branch keeps ML code in-repo but comments out runtime execution to satisfy serverless size limits.
+- Weekly NSE cron job should run at Sunday 3:00 AM IST (configured in Vercel as Saturday 21:30 UTC).
 
 7. Future Improvements
 - Move SQL into service layer.

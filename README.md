@@ -145,26 +145,21 @@ python app/scrapers/News_Scrappers/news_scraper.py --save
 python run_daily_pipeline.py
 ```
 
-### Automatic daily run on Render (03:00 IST)
+### Automatic weekly NSE price sync on Vercel (Sunday 03:00 IST)
 
-This repo now includes `render.yaml` cron config:
+This repo now includes `vercel.json` cron config:
 
-- Service type: `cron`
-- Schedule: `30 21 * * *` (UTC), which is `03:00` IST daily
-- Command: `python run_daily_pipeline.py`
+- Path: `/v1/jobs/weekly-nse-price-history`
+- Schedule: `30 21 * * 6` (UTC), which is `03:00` IST Sunday
 
 How it works:
 
-1. Render Cron starts a one-off job at `21:30 UTC` daily.
-2. Job executes `python run_daily_pipeline.py`.
-3. Pipeline runs scrape, sentiment save, feature build, and prediction persistence.
+1. Vercel Cron calls `GET /v1/jobs/weekly-nse-price-history` at `21:30 UTC` Saturday.
+2. Endpoint runs weekly NSE price importer for the most recent 7 days.
+3. Importer upserts OHLCV candles into `stock_prices` with conflict-safe updates.
+4. This weekly cron endpoint currently runs without `CRON_SECRET` for now.
 
-Note for Render Free plan:
-
-- Render Cron Jobs are not available on free instance types.
-- Use the GitHub Actions scheduler below if you are on the free plan.
-
-### Automatic daily run via GitHub Actions (Render Free friendly)
+### Automatic daily pipeline trigger via GitHub Actions
 
 This repo includes `.github/workflows/daily-pipeline-trigger.yml`:
 
@@ -173,7 +168,7 @@ This repo includes `.github/workflows/daily-pipeline-trigger.yml`:
 
 Required GitHub repository secrets:
 
-- `PIPELINE_TRIGGER_URL`: full URL, for example `https://<your-render-domain>/v1/jobs/daily-pipeline`
+- `PIPELINE_TRIGGER_URL`: full URL, for example `https://<your-vercel-domain>/v1/jobs/daily-pipeline`
 - `CRON_SECRET` (optional but recommended): same value configured in your backend environment
 
 Required backend environment variable:
@@ -210,7 +205,7 @@ Why:
 
 Recommended deployment split:
 1. Deploy frontend (if any) on Netlify
-2. Deploy this Python backend on Render, Railway, Fly.io, or a VPS
+2. Deploy this Python backend on Vercel, Railway, Fly.io, or a VPS
 3. Use platform cron/scheduler for `run_daily_pipeline.py`
 
 If you still want Netlify-only:

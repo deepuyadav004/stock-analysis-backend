@@ -61,3 +61,26 @@ async def run_daily_pipeline_job(request: Request) -> JSONResponse:
             },
             status_code=500,
         )
+
+
+async def run_weekly_nse_price_history_job(request: Request) -> JSONResponse:
+    try:
+        summary = await to_thread.run_sync(run_nse_weekly_price_history)
+        return JSONResponse(
+            {
+                "status": "ok",
+                "job": "weekly_nse_price_history",
+                "summary": summary,
+                "triggered_at_utc": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+    except Exception as exc:
+        return JSONResponse(
+            {
+                "status": "error",
+                "job": "weekly_nse_price_history",
+                "detail": str(exc),
+                "triggered_at_utc": datetime.now(timezone.utc).isoformat(),
+            },
+            status_code=500,
+        )

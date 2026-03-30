@@ -255,16 +255,42 @@ def import_nse_price_history(
     symbol: str | None = None,
     limit: int | None = None,
     sleep_seconds: float = 0.2,
+    lookback_days: int | None = None,
+    window_days: int = 365,
 ) -> dict[str, int]:
     job_started_at = time.perf_counter()
     print("Starting NSE price history import...", flush=True)
     print(
-        f"Parameters: years={years}, symbol={symbol or 'ALL'}, limit={limit if limit is not None else 'none'}, sleep_seconds={sleep_seconds}",
+        "Parameters: "
+        f"years={years}, "
+        f"lookback_days={lookback_days if lookback_days is not None else 'none'}, "
+        f"window_days={window_days}, "
+        f"symbol={symbol or 'ALL'}, "
+        f"limit={limit if limit is not None else 'none'}, "
+        f"sleep_seconds={sleep_seconds}",
         flush=True,
     )
+    if window_days <= 0:
+        raise ValueError("window_days must be greater than 0")
+
     today = date.today()
-    windows = _iter_year_windows(today, years)
-    print(f"Prepared {len(windows)} year windows ending on {today}.", flush=True)
+    if lookback_days is not None:
+        if lookback_days <= 0:
+            raise ValueError("lookback_days must be greater than 0")
+        start_date = today - timedelta(days=lookback_days - 1)
+        windows: list[tuple[date, date]] = []
+        cursor = start_date
+        while cursor <= today:
+            window_end = min(cursor + timedelta(days=window_days - 1), today)
+            windows.append((cursor, window_end))
+            cursor = window_end + timedelta(days=1)
+        print(
+            f"Prepared {len(windows)} window(s) from {start_date} to {today} with window_days={window_days}.",
+            flush=True,
+        )
+    else:
+        windows = _iter_year_windows(today, years)
+        print(f"Prepared {len(windows)} year windows ending on {today}.", flush=True)
     print("Step 1/3: Load NSE listings from DB", flush=True)
     listings = _load_nse_listings(symbol=symbol, limit=limit)
     print("Step 2/3: Bootstrap NSE HTTP session", flush=True)
@@ -279,7 +305,13 @@ def import_nse_price_history(
     failed_symbols = 0
 
     print(f"Loaded {total_symbols} NSE listings from DB.", flush=True)
-    print(f"Fetching {years} years using {len(windows)} one-year windows.", flush=True)
+    if lookback_days is not None:
+        print(
+            f"Fetching {lookback_days} day(s) using {len(windows)} window(s) of up to {window_days} day(s).",
+            flush=True,
+        )
+    else:
+        print(f"Fetching {years} years using {len(windows)} one-year windows.", flush=True)
     if windows:
         print(f"Date coverage: {windows[0][0]} -> {windows[-1][1]}", flush=True)
     print(f"Total target windows: {total_window_targets}", flush=True)
@@ -363,6 +395,17 @@ def import_nse_price_history(
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Import NSE price history into stock_prices.")
     parser.add_argument("--years", type=int, default=10, help="Number of years to backfill.")
+    parser.add_argument(
+        "--lookback-days",
+        type=int,
+        help="If set, overrides years and fetches only this many recent days.",
+    )
+    parser.add_argument(
+        "--window-days",
+        type=int,
+        default=365,
+        help="Maximum number of days to request in each NSE API window.",
+    )
     parser.add_argument("--symbol", help="Import only one NSE symbol.")
     parser.add_argument("--limit", type=int, help="Limit number of NSE listings for test runs.")
     parser.add_argument(
@@ -378,6 +421,8 @@ if __name__ == "__main__":
     args = _parse_args()
     summary = import_nse_price_history(
         years=args.years,
+        lookback_days=args.lookback_days,
+        window_days=args.window_days,
         symbol=args.symbol,
         limit=args.limit,
         sleep_seconds=args.sleep_seconds,

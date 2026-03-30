@@ -35,3 +35,16 @@ Separates orchestration logic from CLI-only scripts so the same pipeline can be 
 - Add execution telemetry (duration, failures, row counts) persisted to a job_runs table.
 - Add idempotency safeguards for repeated same-day triggers.
 - Add retry strategy around external scraper failures.
+
+8. Weekly NSE Price Import Scheduler
+Purpose:
+- Run a weekly NSE OHLCV sync as a deployment cron job.
+
+Files:
+- nse_weekly_price_history.py: exposes run_nse_weekly_price_history() which imports last 7 days of NSE price data using a single 7-day API window.
+
+Flow:
+1. Cron trigger starts run_weekly_nse_price_history.py.
+2. Script calls app.schedulers.nse_weekly_price_history.run_nse_weekly_price_history().
+3. Scheduler calls import_nse_price_history(lookback_days=7, window_days=7).
+4. Scraper fetches last-week price data and upserts into stock_prices.
