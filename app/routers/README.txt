@@ -8,6 +8,7 @@ Provides stable entry points for mobile app data retrieval with support for sect
 
 3. File Responsibilities
 - home.py: Chunk 1-3 endpoints with filtering (signals, trends, detail, etc).
+- ideas.py: Chunk 7 endpoint for stock ideas list with source/call_type/search filters.
 - insights.py: Chunk 4 endpoints for compare and stability insights.
 - jobs.py: Protected endpoint(s) for cron-triggered backend jobs.
 - test.py: Lightweight service availability endpoint.
@@ -19,8 +20,10 @@ Provides stable entry points for mobile app data retrieval with support for sect
 3. `GET /v1/insights/signal-stability` computes per-sector signal flips and stability ratio.
 4. `GET /v1/meta/version` returns lightweight API release metadata.
 5. `GET /v1/meta/diagnostics` returns dataset health counts for app diagnostics.
-6. `GET /v1/jobs/daily-pipeline` runs the daily pipeline when called by cron with valid bearer auth.
-7. `GET /v1/jobs/weekly-nse-price-history` runs weekly NSE stock price sync for the last 7 days when called by cron (no bearer auth for now).
+6. `GET /v1/ideas/list` returns paginated stock ideas from multi-source scraper ingestion.
+7. `GET /v1/ideas/{idea_id}` returns full detail for one stock-idea record.
+8. `GET /v1/jobs/daily-pipeline` runs the daily pipeline when called by cron with valid bearer auth.
+9. `GET /v1/jobs/weekly-nse-price-history` runs weekly NSE stock price sync for the last 7 days when called by cron (no bearer auth for now).
 
 5. Interactions
 - Uses app/core/database.py for DB engine.
