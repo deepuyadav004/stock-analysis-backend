@@ -6,6 +6,7 @@ from app.core.database import engine
 from app.models.FeatureBuilder import SectorFeatureBuilder
 from app.models.PredictionModel import SectorPredictionModel
 from app.scrapers.News_Scrappers.news_scraper import scrape_analyze_and_save
+from app.schedulers.stock_ideas_daily import run_daily_stock_ideas_ingestion
 
 
 def run_daily_pipeline() -> int:
@@ -51,3 +52,8 @@ def run_daily_pipeline() -> int:
         flush=True,
     )
     return predictions_made
+
+
+def run_stock_ideas_daily_job() -> dict:
+    """Convenience wrapper to keep scheduler entrypoints discoverable in one place."""
+    return run_daily_stock_ideas_ingestion()

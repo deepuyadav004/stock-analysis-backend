@@ -79,3 +79,24 @@ CREATE TABLE sector_predictions (
     created_at    TIMESTAMPTZ DEFAULT NOW(),
     PRIMARY KEY (sector_id, date)
 );
+
+CREATE TABLE IF NOT EXISTS stock_ideas_recommendations (
+  id BIGSERIAL PRIMARY KEY,
+  ticker VARCHAR(20) NOT NULL,
+  company_name TEXT NOT NULL,
+  call_type TEXT CHECK (call_type IN ('BUY', 'SELL', 'HOLD')),
+  target_price NUMERIC(12,2),
+  recommendation_date DATE,
+  source TEXT NOT NULL CHECK (source IN ('moneycontrol', 'kotakneo', 'lemonn')),
+  brief_rationale TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_stock_ideas_ticker
+ON stock_ideas_recommendations (ticker);
+
+CREATE INDEX IF NOT EXISTS idx_stock_ideas_source_date
+ON stock_ideas_recommendations (source, recommendation_date DESC);
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_stock_ideas_ticker_source_date
+ON stock_ideas_recommendations (ticker, source, COALESCE(recommendation_date, DATE '1900-01-01'));
