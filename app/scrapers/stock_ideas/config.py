@@ -21,7 +21,7 @@ SOURCE_CONFIGS: dict[str, SourceConfig] = {
     "moneycontrol": SourceConfig(
         key="moneycontrol",
         display_name="Moneycontrol",
-        url="https://www.moneycontrol.com/stocks/marketstats/recommendations/index.php",
+        url="https://www.moneycontrol.com/markets/stock-ideas/",
         max_pages=20,
     ),
     "kotakneo": SourceConfig(

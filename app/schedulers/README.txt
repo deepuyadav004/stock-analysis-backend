@@ -48,3 +48,18 @@ Flow:
 2. Script calls app.schedulers.nse_weekly_price_history.run_nse_weekly_price_history().
 3. Scheduler calls import_nse_price_history(lookback_days=7, window_days=7).
 4. Scraper fetches last-week price data and upserts into stock_prices.
+
+9. Daily Stock Ideas Ingestion Scheduler
+Purpose:
+- Run recommendation ingestion from Moneycontrol, Kotak Neo, and Lemonn once per day.
+
+Files:
+- stock_ideas_daily.py: exposes run_daily_stock_ideas_ingestion() and executes all source scrapers with per-source fault isolation.
+- ../run_stock_ideas_daily.py: lightweight CLI entrypoint to run stock ideas ingestion manually.
+
+Flow:
+1. Scheduler starts run_daily_stock_ideas_ingestion().
+2. Moneycontrol scraper runs and returns parsed/deduplicated/saved counts.
+3. Kotak Neo scraper runs and returns parsed/deduplicated/saved counts.
+4. Lemonn scraper runs and returns parsed/deduplicated/saved counts.
+5. Scheduler aggregates source summaries and prints final status (ok/partial).
