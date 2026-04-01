@@ -10,6 +10,7 @@ Provides stable entry points for mobile app data retrieval with support for sect
 - home.py: Chunk 1-3 endpoints with filtering (signals, trends, detail, etc).
 - ideas.py: Chunk 7 endpoint for stock ideas list with source/call_type/search filters.
 - insights.py: Chunk 4 endpoints for compare and stability insights.
+- news.py: Chunk 8 endpoint for latest news headlines with source filter and pagination.
 - jobs.py: Protected endpoint(s) for cron-triggered backend jobs.
 - test.py: Lightweight service availability endpoint.
 - __init__.py: Package marker.
@@ -22,8 +23,10 @@ Provides stable entry points for mobile app data retrieval with support for sect
 5. `GET /v1/meta/diagnostics` returns dataset health counts for app diagnostics.
 6. `GET /v1/ideas/list` returns paginated stock ideas from multi-source scraper ingestion.
 7. `GET /v1/ideas/{idea_id}` returns full detail for one stock-idea record.
-8. `GET /v1/jobs/daily-pipeline` runs the daily pipeline when called by cron with valid bearer auth.
-9. `GET /v1/jobs/weekly-nse-price-history` runs weekly NSE stock price sync for the last 7 days when called by cron (no bearer auth for now).
+8. `GET /v1/news/list` returns paginated news headlines with original source article URLs.
+9. `GET /v1/jobs/daily-pipeline` runs the daily pipeline when called by cron with valid bearer auth.
+10. `GET /v1/jobs/news-links-ingestion` runs news headline-link ingestion for all configured sources.
+11. `GET /v1/jobs/weekly-nse-price-history` runs weekly NSE stock price sync for the last 7 days when called by cron (no bearer auth for now).
 
 5. Interactions
 - Uses app/core/database.py for DB engine.
