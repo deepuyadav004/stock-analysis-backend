@@ -6,6 +6,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 # from app.schedulers.daily_pipeline import run_daily_pipeline
+from app.schedulers.news_links_daily import run_daily_news_links_ingestion
 from app.schedulers.nse_weekly_price_history import run_nse_weekly_price_history
 
 
@@ -80,6 +81,29 @@ async def run_weekly_nse_price_history_job(request: Request) -> JSONResponse:
             {
                 "status": "error",
                 "job": "weekly_nse_price_history",
+                "detail": str(exc),
+                "triggered_at_utc": datetime.now(timezone.utc).isoformat(),
+            },
+            status_code=500,
+        )
+
+
+async def run_news_links_ingestion_job(request: Request) -> JSONResponse:
+    try:
+        summary = await to_thread.run_sync(run_daily_news_links_ingestion)
+        return JSONResponse(
+            {
+                "status": "ok",
+                "job": "news_links_ingestion",
+                "summary": summary,
+                "triggered_at_utc": datetime.now(timezone.utc).isoformat(),
+            }
+        )
+    except Exception as exc:
+        return JSONResponse(
+            {
+                "status": "error",
+                "job": "news_links_ingestion",
                 "detail": str(exc),
                 "triggered_at_utc": datetime.now(timezone.utc).isoformat(),
             },

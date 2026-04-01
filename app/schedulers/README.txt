@@ -63,3 +63,17 @@ Flow:
 3. Kotak Neo scraper runs and returns parsed/deduplicated/saved counts.
 4. Lemonn scraper runs and returns parsed/deduplicated/saved counts.
 5. Scheduler aggregates source summaries and prints final status (ok/partial).
+
+10. Daily News Links Ingestion Scheduler
+Purpose:
+- Run daily headline-link ingestion for the News tab from ICICI Direct, Economic Times, and Moneycontrol.
+
+Files:
+- news_links_daily.py: exposes run_daily_news_links_ingestion() and delegates source scraping/upsert to news_links_ingestor.
+
+Flow:
+1. Scheduler starts run_daily_news_links_ingestion(target_count_per_source=50).
+2. Ingestor runs all three source scrapers.
+3. Each source scraper follows pagination and attempts to collect up to 50 items.
+4. Records are deduplicated by (source, source_url) and upserted into news_articles.
+5. Scheduler returns per-source and aggregate summary for logs/API response.
