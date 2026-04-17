@@ -1,0 +1,196 @@
+name: Azure Web App CI/CD and Schedulers
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+  schedule:
+    - cron: "30 21 * * *" # Daily pipeline at 03:00 IST
+    - cron: "0 22 * * *" # News links ingestion at 03:30 IST
+    - cron: "30 22 * * *" # Stock ideas daily at 04:00 IST
+    - cron: "30 21 * * 6" # Weekly NSE price history at 03:00 IST Sunday
+
+permissions:
+  contents: read
+
+concurrency:
+  group: azure-webapp-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Deploy to Azure Web App
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
+          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+          package: .
+
+      - name: Smoke test health endpoint
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+        run: |
+          if [ -z "$APP_BASE_URL" ]; then
+            echo "APP_BASE_URL secret is missing"
+            exit 1
+          fi
+
+          health_url="${APP_BASE_URL%/}/health"
+          db_url="${APP_BASE_URL%/}/health/db"
+
+          echo "Checking $health_url"
+          curl --fail --silent --show-error "$health_url"
+
+          echo "Checking $db_url"
+          curl --fail --silent --show-error "$db_url"
+
+  daily_pipeline:
+    if: github.event_name == 'schedule' && github.event.schedule == '30 21 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Trigger daily pipeline job
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_BASE_URL" ]; then
+            echo "APP_BASE_URL secret is missing"
+            exit 1
+          fi
+
+          job_url="${APP_BASE_URL%/}/v1/jobs/daily-pipeline"
+          echo "Calling $job_url"
+
+          if [ -n "$CRON_SECRET" ]; then
+            response=$(curl -sS -w "\n%{http_code}" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              "$job_url")
+          else
+            response=$(curl -sS -w "\n%{http_code}" "$job_url")
+          fi
+
+          body=$(echo "$response" | sed '$d')
+          code=$(echo "$response" | tail -n1)
+
+          echo "HTTP status: $code"
+          echo "Response body: $body"
+
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            exit 1
+          fi
+
+  news_links_ingestion:
+    if: github.event_name == 'schedule' && github.event.schedule == '0 22 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Trigger news links ingestion job
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_BASE_URL" ]; then
+            echo "APP_BASE_URL secret is missing"
+            exit 1
+          fi
+
+          job_url="${APP_BASE_URL%/}/v1/jobs/news-links-ingestion"
+          echo "Calling $job_url"
+
+          if [ -n "$CRON_SECRET" ]; then
+            response=$(curl -sS -w "\n%{http_code}" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              "$job_url")
+          else
+            response=$(curl -sS -w "\n%{http_code}" "$job_url")
+          fi
+
+          body=$(echo "$response" | sed '$d')
+          code=$(echo "$response" | tail -n1)
+
+          echo "HTTP status: $code"
+          echo "Response body: $body"
+
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            exit 1
+          fi
+
+  stock_ideas_daily:
+    if: github.event_name == 'schedule' && github.event.schedule == '30 22 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Trigger stock ideas daily job
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_BASE_URL" ]; then
+            echo "APP_BASE_URL secret is missing"
+            exit 1
+          fi
+
+          job_url="${APP_BASE_URL%/}/v1/jobs/stock-ideas-daily"
+          echo "Calling $job_url"
+
+          if [ -n "$CRON_SECRET" ]; then
+            response=$(curl -sS -w "\n%{http_code}" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              "$job_url")
+          else
+            response=$(curl -sS -w "\n%{http_code}" "$job_url")
+          fi
+
+          body=$(echo "$response" | sed '$d')
+          code=$(echo "$response" | tail -n1)
+
+          echo "HTTP status: $code"
+          echo "Response body: $body"
+
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            exit 1
+          fi
+
+  weekly_nse_price_history:
+    if: github.event_name == 'schedule' && github.event.schedule == '30 21 * * 6'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Trigger weekly NSE price history job
+        env:
+          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          if [ -z "$APP_BASE_URL" ]; then
+            echo "APP_BASE_URL secret is missing"
+            exit 1
+          fi
+
+          job_url="${APP_BASE_URL%/}/v1/jobs/weekly-nse-price-history"
+          echo "Calling $job_url"
+
+          if [ -n "$CRON_SECRET" ]; then
+            response=$(curl -sS -w "\n%{http_code}" \
+              -H "Authorization: Bearer $CRON_SECRET" \
+              "$job_url")
+          else
+            response=$(curl -sS -w "\n%{http_code}" "$job_url")
+          fi
+
+          body=$(echo "$response" | sed '$d')
+          code=$(echo "$response" | tail -n1)
+
+          echo "HTTP status: $code"
+          echo "Response body: $body"
+
+          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
+            exit 1
+          fi

@@ -12,6 +12,7 @@ from app.routers.jobs import (
     run_daily_pipeline_job,
     run_news_links_ingestion_job,
     run_weekly_nse_price_history_job,
+    run_stock_ideas_daily_job,
 )
 from app.routers.news import news_list
 from app.routers.test import test_endpoint
@@ -89,6 +90,7 @@ app = Starlette(
         Route("/v1/insights/signal-stability", insights_signal_stability),
         Route("/v1/news/list", news_list),
         Route("/v1/jobs/daily-pipeline", run_daily_pipeline_job, methods=["GET"]),
+        Route("/v1/jobs/stock-ideas-daily", run_stock_ideas_daily_job, methods=["GET"]),
         Route("/v1/jobs/news-links-ingestion", run_news_links_ingestion_job, methods=["GET"]),
         Route(
             "/v1/jobs/weekly-nse-price-history",
