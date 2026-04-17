@@ -1,196 +1,66 @@
-name: Azure Web App CI/CD and Schedulers
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
+
+name: Build and deploy Python app to Azure Web App - stock-analysis-backend
 
 on:
   push:
     branches:
-      - main
+      - master
   workflow_dispatch:
-  schedule:
-    - cron: "30 21 * * *" # Daily pipeline at 03:00 IST
-    - cron: "0 22 * * *" # News links ingestion at 03:30 IST
-    - cron: "30 22 * * *" # Stock ideas daily at 04:00 IST
-    - cron: "30 21 * * 6" # Weekly NSE price history at 03:00 IST Sunday
-
-permissions:
-  contents: read
-
-concurrency:
-  group: azure-webapp-${{ github.ref }}
-  cancel-in-progress: false
 
 jobs:
-  deploy:
-    if: github.event_name != 'schedule'
+  build:
     runs-on: ubuntu-latest
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
+    permissions:
+      contents: read #This is required for actions/checkout
 
-      - name: Deploy to Azure Web App
-        uses: azure/webapps-deploy@v3
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python version
+        uses: actions/setup-python@v5
         with:
-          app-name: ${{ secrets.AZURE_WEBAPP_NAME }}
-          publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: .
+          python-version: '3.11'
 
-      - name: Smoke test health endpoint
-        env:
-          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
+      # 🛠️ Local Build Section (Optional)
+      # The following section in your workflow is designed to catch build issues early on the client side, before deployment. This can be helpful for debugging and validation. However, if this step significantly increases deployment time and early detection is not critical for your workflow, you may remove this section to streamline the deployment process.
+      - name: Create and Start virtual environment and Install dependencies
         run: |
-          if [ -z "$APP_BASE_URL" ]; then
-            echo "APP_BASE_URL secret is missing"
-            exit 1
-          fi
+          python -m venv antenv
+          source antenv/bin/activate
+          pip install -r requirements.txt
+                
+      # By default, when you enable GitHub CI/CD integration through the Azure portal, the platform automatically sets the SCM_DO_BUILD_DURING_DEPLOYMENT application setting to true. This triggers the use of Oryx, a build engine that handles application compilation and dependency installation (e.g., pip install) directly on the platform during deployment. Hence, we exclude the antenv virtual environment directory from the deployment artifact to reduce the payload size. 
+      - name: Upload artifact for deployment jobs
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-app
+          path: |
+            .
+            !antenv/
 
-          health_url="${APP_BASE_URL%/}/health"
-          db_url="${APP_BASE_URL%/}/health/db"
+      # 🚫 Opting Out of Oryx Build
+      # If you prefer to disable the Oryx build process during deployment, follow these steps:
+      # 1. Remove the SCM_DO_BUILD_DURING_DEPLOYMENT app setting from your Azure App Service Environment variables.
+      # 2. Refer to sample workflows for alternative deployment strategies: https://github.com/Azure/actions-workflow-samples/tree/master/AppService
+      
 
-          echo "Checking $health_url"
-          curl --fail --silent --show-error "$health_url"
-
-          echo "Checking $db_url"
-          curl --fail --silent --show-error "$db_url"
-
-  daily_pipeline:
-    if: github.event_name == 'schedule' && github.event.schedule == '30 21 * * *'
+  deploy:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    needs: build
+    
     steps:
-      - name: Trigger daily pipeline job
-        env:
-          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          if [ -z "$APP_BASE_URL" ]; then
-            echo "APP_BASE_URL secret is missing"
-            exit 1
-          fi
-
-          job_url="${APP_BASE_URL%/}/v1/jobs/daily-pipeline"
-          echo "Calling $job_url"
-
-          if [ -n "$CRON_SECRET" ]; then
-            response=$(curl -sS -w "\n%{http_code}" \
-              -H "Authorization: Bearer $CRON_SECRET" \
-              "$job_url")
-          else
-            response=$(curl -sS -w "\n%{http_code}" "$job_url")
-          fi
-
-          body=$(echo "$response" | sed '$d')
-          code=$(echo "$response" | tail -n1)
-
-          echo "HTTP status: $code"
-          echo "Response body: $body"
-
-          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
-            exit 1
-          fi
-
-  news_links_ingestion:
-    if: github.event_name == 'schedule' && github.event.schedule == '0 22 * * *'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Trigger news links ingestion job
-        env:
-          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          if [ -z "$APP_BASE_URL" ]; then
-            echo "APP_BASE_URL secret is missing"
-            exit 1
-          fi
-
-          job_url="${APP_BASE_URL%/}/v1/jobs/news-links-ingestion"
-          echo "Calling $job_url"
-
-          if [ -n "$CRON_SECRET" ]; then
-            response=$(curl -sS -w "\n%{http_code}" \
-              -H "Authorization: Bearer $CRON_SECRET" \
-              "$job_url")
-          else
-            response=$(curl -sS -w "\n%{http_code}" "$job_url")
-          fi
-
-          body=$(echo "$response" | sed '$d')
-          code=$(echo "$response" | tail -n1)
-
-          echo "HTTP status: $code"
-          echo "Response body: $body"
-
-          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
-            exit 1
-          fi
-
-  stock_ideas_daily:
-    if: github.event_name == 'schedule' && github.event.schedule == '30 22 * * *'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Trigger stock ideas daily job
-        env:
-          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          if [ -z "$APP_BASE_URL" ]; then
-            echo "APP_BASE_URL secret is missing"
-            exit 1
-          fi
-
-          job_url="${APP_BASE_URL%/}/v1/jobs/stock-ideas-daily"
-          echo "Calling $job_url"
-
-          if [ -n "$CRON_SECRET" ]; then
-            response=$(curl -sS -w "\n%{http_code}" \
-              -H "Authorization: Bearer $CRON_SECRET" \
-              "$job_url")
-          else
-            response=$(curl -sS -w "\n%{http_code}" "$job_url")
-          fi
-
-          body=$(echo "$response" | sed '$d')
-          code=$(echo "$response" | tail -n1)
-
-          echo "HTTP status: $code"
-          echo "Response body: $body"
-
-          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
-            exit 1
-          fi
-
-  weekly_nse_price_history:
-    if: github.event_name == 'schedule' && github.event.schedule == '30 21 * * 6'
-    runs-on: ubuntu-latest
-    timeout-minutes: 30
-    steps:
-      - name: Trigger weekly NSE price history job
-        env:
-          APP_BASE_URL: ${{ secrets.APP_BASE_URL }}
-          CRON_SECRET: ${{ secrets.CRON_SECRET }}
-        run: |
-          if [ -z "$APP_BASE_URL" ]; then
-            echo "APP_BASE_URL secret is missing"
-            exit 1
-          fi
-
-          job_url="${APP_BASE_URL%/}/v1/jobs/weekly-nse-price-history"
-          echo "Calling $job_url"
-
-          if [ -n "$CRON_SECRET" ]; then
-            response=$(curl -sS -w "\n%{http_code}" \
-              -H "Authorization: Bearer $CRON_SECRET" \
-              "$job_url")
-          else
-            response=$(curl -sS -w "\n%{http_code}" "$job_url")
-          fi
-
-          body=$(echo "$response" | sed '$d')
-          code=$(echo "$response" | tail -n1)
-
-          echo "HTTP status: $code"
-          echo "Response body: $body"
-
-          if [ "$code" -lt 200 ] || [ "$code" -ge 300 ]; then
-            exit 1
-          fi
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: python-app
+      
+      - name: 'Deploy to Azure Web App'
+        uses: azure/webapps-deploy@v3
+        id: deploy-to-webapp
+        with:
+          app-name: 'stock-analysis-backend'
+          slot-name: 'Production'
+          publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_919F4CA145E7420CACD1FE3115223165 }}
